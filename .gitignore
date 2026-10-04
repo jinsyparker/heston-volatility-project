@@ -1,0 +1,12 @@
+.DS_Store
+.ipynb_checkpoints/
+.pytest_cache/
+__pycache__/
+*.pyc
+.venv/
+venv/
+data/raw/*.csv
+data/processed/*.csv
+reports/figures/*.png
+reports/figures/*.svg
+Untitled5.ipynb
