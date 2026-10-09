@@ -6,6 +6,6 @@ Recommended files:
 
 - `data/raw/`: unmodified source pulls, if preserved
 - `data/processed/AAPL_surface.csv`: cleaned options table created by notebook 01
+- `data/sample/`: frozen canonical snapshot used by the README and run summary
 
-The notebooks are written so the data pull can be rerun, but the main analysis should use the saved processed CSV once it exists.
-
+The notebooks are written so the data pull can be rerun, but the main analysis should use a saved CSV once it exists. The current canonical sample was saved from a Yahoo Finance option-chain pull on 2026-10-08 at 21:43 IST.

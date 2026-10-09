@@ -8,5 +8,10 @@ venv/
 data/raw/*.csv
 data/processed/*.csv
 reports/figures/*.png
+!reports/figures/01_market_iv_smiles.png
+!reports/figures/02_iv_surface.png
+!reports/figures/03_heston_bs_validation.png
+!reports/figures/04_heston_calibration_fit.png
+!reports/figures/05_calibration_residuals.png
 reports/figures/*.svg
 Untitled5.ipynb
