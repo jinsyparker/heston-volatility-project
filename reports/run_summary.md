@@ -1,8 +1,8 @@
-# Calibration Run — 2026-10-08
+# Heston Calibration Run
 
-This is the fixed run record for the calibration results shown in the README.
+This is the saved run behind the figures and numbers in the README.
 
-## Data
+## Setup
 
 - Underlying: AAPL
 - Source: Yahoo Finance via `yfinance`
@@ -21,9 +21,9 @@ This is the fixed run record for the calibration results shown in the README.
 - Zero-rate median parity residual: 1.0300
 - Expiry-level inferred-rate median parity residual: 0.0572
 
-The parity adjustment reduces the median residual, but the inferred rates and dividend yields are still noisy. I treat them as a useful diagnostic input rather than a clean market curve.
+The parity adjustment reduces the median residual, but the inferred rates and dividend yields are still noisy. I treat them as useful inputs for this experiment, not as a clean market curve.
 
-## Calibration Target
+## Calibration Setup
 
 - Expiry: 2027-01-15
 - Time to maturity: 0.2692 years
@@ -32,9 +32,6 @@ The parity adjustment reduces the median residual, but the inferred rates and di
 - Moneyness range: 0.89 to 1.15
 - Calibration rate: -0.0094
 - Calibration dividend yield: -0.0361
-
-## Numerical Setup
-
 - Pricing method: Heston Monte Carlo
 - Device: CPU
 - Calibration paths: 6,000
@@ -60,7 +57,7 @@ The parity adjustment reduces the median residual, but the inferred rates and di
 | sigma | 0.3000 |
 | rho | -0.7000 |
 
-## Monte Carlo Validation
+## Black-Scholes Limit Check
 
 - Test: Heston Black-Scholes limiting case with sigma = 0 and v0 = theta
 - Strike: ATM, K = 338.72
@@ -72,17 +69,19 @@ The parity adjustment reduces the median residual, but the inferred rates and di
 - Absolute error: 0.2012
 - Relative error: 0.63%
 
-## Observations
+## Notes
 
-The model captures the broad level of the selected smile, but it misses some local curvature around the lower-middle strikes.
+The fit gets the broad smile level reasonably close, but it misses some local curvature around the lower-middle strikes.
 
-Residual errors are structured rather than uniformly distributed across strikes. The largest absolute residual is near the 321 strike.
+The residual errors are structured across strikes rather than evenly scattered around zero. The largest absolute residual is near the 321 strike.
 
-Several parameters changed little from their starting values. I would not interpret `kappa`, `sigma`, or `rho` strongly from this single-expiry calibration.
+`kappa`, `sigma`, and `rho` did not move much from their starting values in this run. I would want to use more than one expiry before interpreting those parameters too strongly.
 
-The fitted `v0` is above `theta`, which is consistent with the fitted model assigning higher near-term variance than long-run variance. This should be treated cautiously because the calibration target is limited.
+The fitted `v0` is above `theta`, which is consistent with the fitted model assigning higher near-term variance than long-run variance. I would still read this cautiously because the target is one selected expiry.
 
-## Figures and Supporting Files
+If I continue this experiment, I would probably fit several expiries together and compare the Monte Carlo prices with the semi-closed-form Heston solution.
+
+## Files
 
 - [Market IV smiles](figures/01_market_iv_smiles.png)
 - [Smoothed IV surface](figures/02_iv_surface.png)
@@ -92,11 +91,3 @@ The fitted `v0` is above `theta`, which is consistent with the fitted model assi
 - `reports/canonical_run_metrics.json`
 - `data/sample/AAPL_canonical_surface_checked.csv`
 - `data/sample/AAPL_canonical_iv_fit.csv`
-
-## Follow-up Experiment
-
-Natural next experiments:
-
-- Calibrate several maturities jointly instead of fitting one smile.
-- Compare the Monte Carlo results with a faster characteristic-function or Fourier-based Heston pricer.
-- Repeat the calibration across multiple market dates to check parameter stability.
