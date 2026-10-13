@@ -1,48 +1,52 @@
-# Heston Volatility Project
+# Heston Stochastic Volatility: Calibration to Equity Option Data
 
-I started this project because I wanted to understand implied volatility beyond the constant-volatility Black-Scholes framework. I had worked with option pricing, Greeks, and implied-volatility inversion before, but I wanted to take the next step: use actual option-market data, build a volatility surface, and see how far a stochastic-volatility model could go in reproducing a market smile.
+I started this project because I wanted to understand how stochastic-volatility models explain features of option prices that Black-Scholes cannot, especially the implied-volatility smile. I used listed AAPL option data to construct an observed volatility smile and then compared it with a Heston model calibrated using Monte Carlo pricing.
 
-I use AAPL option data for the main example because the option chain is liquid enough to make the cleaning and calibration steps meaningful. As I worked through it, the exercise gradually became a full workflow: collect and clean option quotes, validate the data, construct implied-volatility smiles and surfaces, implement Heston Monte Carlo pricing, and calibrate the model to an observed smile.
+My focus was not only on getting fitted parameters. I also wanted to understand the numerical behavior of the calibration, the residual errors, and which Heston parameters can realistically be identified from one option cross-section.
 
-The part I found most interesting was moving from "pricing an option" to asking what the shape of the volatility smile is telling me. Heston gives a way to connect that shape to variance dynamics, volatility of volatility, and the relationship between spot moves and variance.
-
-## What I Wanted to Explore
+## Research Question
 
 The main question I wanted to answer was:
 
-Can the Heston stochastic-volatility model reproduce the shape of an observed equity-option implied-volatility smile, and what do the calibrated parameters tell me about the underlying volatility dynamics?
+Can the Heston stochastic-volatility model reproduce the shape of an observed equity-option implied-volatility smile, and what can the fitted parameters and calibration residuals tell me about the underlying volatility dynamics and the limitations of the model?
 
-To get there, I worked through several smaller pieces:
+To answer that, I needed to move through the full chain from option quotes to model residuals: cleaning market data, converting prices into implied volatilities, using Black-Scholes as a diagnostic benchmark, implementing Heston Monte Carlo pricing, and calibrating the model to a market smile.
 
-- collecting and cleaning AAPL option-chain data
-- constructing midpoint option prices
-- calculating and smoothing implied volatility
-- checking quotes with Black-Scholes repricing and put-call parity
-- building volatility smiles and a volatility surface
-- using Black-Scholes prices and Greeks as a baseline
-- implementing Heston Monte Carlo simulation
-- validating the Heston engine in the Black-Scholes limiting case
-- calibrating Heston parameters to a market implied-volatility smile
+## Data
 
-## Project Flow
+| Item | Value |
+| --- | --- |
+| Underlying | AAPL |
+| Source | Yahoo Finance via `yfinance` |
+| Snapshot saved | 2026-10-08 21:43 IST |
+| Spot used | 338.72 |
+| Clean observations | 592 |
+| Expiries retained | 10 |
+| Expiry range | 2026-10-23 to 2027-04-16 |
+| Calibration expiry | 2027-01-15 |
+| Calibration moneyness range | 0.89 to 1.15 |
 
-### 1. Market Data and Implied-Volatility Surface
+The option chain needed cleaning before the implied-volatility surface could be analyzed meaningfully. I used midpoint prices, required positive open interest, filtered extreme moneyness, and kept implied volatilities within the range already used by the project.
 
-In `notebooks/01_data_and_option_surface.ipynb`, I download the AAPL option chain, construct midpoint prices, filter unusable quotes, and run basic validation checks. I then smooth implied volatility by expiry and combine the fitted smiles into a surface over moneyness and maturity.
+## Methodology
 
-The canonical run saved in this repository uses 592 cleaned option observations across 10 expiries, from 2026-10-23 to 2027-04-16.
+### 1. Market Data and Implied Volatility
+
+I first cleaned the option chain and converted observed option prices into Black-Scholes implied volatilities. This gives a common scale for comparing options across strikes and makes the volatility smile directly visible.
+
+The cleaned data still reflects real market imperfections: missing or unusable quotes, liquidity differences, and noisy implied-volatility estimates. I smooth the smiles by expiry and combine them into an implied-volatility surface over moneyness and maturity.
 
 ![Market IV smiles](reports/figures/01_market_iv_smiles.png)
 
-### 2. Black-Scholes, Greeks, and Scenario Analysis
+### 2. Black-Scholes Diagnostics
 
-In `notebooks/02_black_scholes_greeks_and_scenarios.ipynb`, I use Black-Scholes as the baseline model. I calculate prices and Greeks, then look at simple spot, volatility, and time scenarios.
+I use Black-Scholes as the baseline model, not as the final explanation of the smile. It is useful for implied-volatility inversion, quote checks, Greeks, and simple scenario analysis.
 
-I wanted this step in the project because Black-Scholes is still the natural reference point. It gives a clean way to invert option prices into implied volatility, check quotes, and understand how option values respond to basic inputs before moving to stochastic volatility.
+The observed strike dependence of implied volatility is exactly why I moved beyond a flat-volatility model. Black-Scholes gives the diagnostic language; Heston is the stochastic-volatility model I then test against the observed smile.
 
 ### 3. Heston Monte Carlo
 
-In `notebooks/03_heston_monte_carlo.ipynb`, I implement the Heston stochastic-volatility model using Monte Carlo simulation.
+I implemented the Heston stochastic-volatility model using Monte Carlo simulation:
 
 ```text
 dS_t = (r - q) S_t dt + sqrt(v_t) S_t dW_t^S
@@ -50,23 +54,25 @@ dv_t = kappa(theta - v_t) dt + sigma sqrt(v_t) dW_t^v
 corr(dW_t^S, dW_t^v) = rho
 ```
 
-The parameters have the following roles:
+The parameters are:
 
 - `v0`: initial variance
-- `kappa`: speed of variance mean reversion
 - `theta`: long-run variance
+- `kappa`: speed of variance mean reversion
 - `sigma`: volatility of variance
 - `rho`: correlation between spot and variance shocks
 
-One thing I wanted to check was whether the simulation behaves correctly in a known limiting case. When `sigma = 0` and `v0 = theta`, the Heston model should collapse to Black-Scholes. In the saved validation run, the Heston Monte Carlo ATM call price differs from the analytical Black-Scholes price by 0.2012, or 0.63%.
+I used Monte Carlo because it makes the stochastic dynamics explicit and gives a direct numerical implementation of the model. It is not the most efficient method for repeated Heston calibration, which is one reason I treat the calibration as an exploratory numerical experiment rather than a production implementation.
+
+One validation step was checking the Black-Scholes limiting case. When `sigma = 0` and `v0 = theta`, the Heston model should collapse to Black-Scholes. In the saved validation run, the Heston Monte Carlo ATM call price differs from the analytical Black-Scholes price by 0.2012, or 0.63%.
 
 ![Black-Scholes limiting-case validation](reports/figures/03_heston_bs_validation.png)
 
 ### 4. Heston Calibration
 
-In `notebooks/04_heston_calibration.ipynb`, I calibrate the five Heston parameters to a selected AAPL implied-volatility smile. I compare the model and market in implied-volatility space, because that makes the calibration error easier to interpret across strikes.
+I calibrate the five Heston parameters to a selected AAPL implied-volatility smile. The comparison is made in implied-volatility space, and the objective is the mean squared error between model-implied and market-implied volatilities.
 
-The part I found most interesting here was seeing how the Heston parameters affect the shape of the smile rather than just treating them as numbers inside an SDE. In particular, `rho` affects skew, `sigma` affects curvature through volatility of volatility, and `v0` and `theta` help set the variance level.
+The calibration is intentionally limited: it uses one maturity and a moderate Monte Carlo setup. That makes the fitted residuals and weakly identified parameters part of the result rather than something to hide.
 
 ## Results
 
