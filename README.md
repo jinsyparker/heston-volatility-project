@@ -36,8 +36,6 @@ I first cleaned the option chain and converted observed option prices into Black
 
 The cleaned data still reflects real market imperfections: missing or unusable quotes, liquidity differences, and noisy implied-volatility estimates. I smooth the smiles by expiry and combine them into an implied-volatility surface over moneyness and maturity.
 
-![Market IV smiles](reports/figures/01_market_iv_smiles.png)
-
 ### 2. Black-Scholes Diagnostics
 
 I use Black-Scholes as the baseline model, not as the final explanation of the smile. It is useful for implied-volatility inversion, quote checks, Greeks, and simple scenario analysis.
@@ -66,8 +64,6 @@ I used Monte Carlo because it makes the stochastic dynamics explicit and gives a
 
 One validation step was checking the Black-Scholes limiting case. When `sigma = 0` and `v0 = theta`, the Heston model should collapse to Black-Scholes. In the saved validation run, the Heston Monte Carlo ATM call price differs from the analytical Black-Scholes price by 0.2012, or 0.63%.
 
-![Black-Scholes limiting-case validation](reports/figures/03_heston_bs_validation.png)
-
 ### 4. Heston Calibration
 
 I calibrate the five Heston parameters to a selected AAPL implied-volatility smile. The comparison is made in implied-volatility space, and the objective is the mean squared error between model-implied and market-implied volatilities.
@@ -76,35 +72,47 @@ The calibration is intentionally limited: it uses one maturity and a moderate Mo
 
 ## Results
 
+The cleaned AAPL option data shows visible strike dependence in implied volatility. This is the feature I wanted the Heston calibration to address.
+
+![Market IV smiles](reports/figures/01_market_iv_smiles.png)
+
 For the canonical run, I calibrated the model to the central part of the AAPL smile for the 2027-01-15 expiry. The target uses 15 strikes with moneyness from 0.89 to 1.15.
 
 ![Heston calibration fit](reports/figures/04_heston_calibration_fit.png)
 
-| Item | Value |
+The calibrated curve matches the broad volatility level of the selected smile, but it does not fully reproduce the local hump around the lower-middle strikes.
+
+| Metric | Value |
 | --- | ---: |
-| Spot used | 338.72 |
-| Target expiry | 2027-01-15 |
-| Time to maturity | 0.2692 years |
-| Number of target strikes | 15 |
 | IV RMSE | 0.0157 |
 | IV MAE | 0.0134 |
 | Max absolute IV residual | 0.0301 |
 
-| Parameter | Fitted value |
-| --- | ---: |
-| `v0` | 0.0708 |
-| `kappa` | 2.0000 |
-| `theta` | 0.0423 |
-| `sigma` | 0.3000 |
-| `rho` | -0.7000 |
+| Parameter | Interpretation | Calibrated value |
+| --- | --- | ---: |
+| `v0` | Initial variance | 0.0708 |
+| `kappa` | Mean-reversion speed | 2.0000 |
+| `theta` | Long-run variance | 0.0423 |
+| `sigma` | Volatility of variance | 0.3000 |
+| `rho` | Spot/variance correlation | -0.7000 |
 
-I found that the fitted model matches the broad volatility level of the selected smile, but it smooths over a local hump around the lower-middle strikes. The largest residual is near the 321 strike, and the residual pattern is easier to see directly:
+The residual plot shows that the errors are not just random noise around zero. They have visible structure across strikes, with the largest absolute residual near the 321 strike.
 
 ![Calibration residuals](reports/figures/05_calibration_residuals.png)
 
-The fitted `v0` is above `theta`, which suggests that the selected smile reflects near-term variance above the model's long-run variance level. The negative `rho` is consistent with the usual equity leverage effect, where downside spot moves are associated with higher variance and a left-skewed smile. Since this is a single-smile calibration, I would not over-interpret every parameter individually, but the fit is useful for understanding how the model responds to the observed smile.
-
 The full run record is saved in `reports/run_summary.md`, and the supporting metrics are saved in `reports/canonical_run_metrics.json`.
+
+## Discussion
+
+The Heston fit captures the broad volatility level of the selected smile, but it does not fully reproduce the local curvature. The target smile rises around the lower-middle strikes and then falls through the center of the selected range. The calibrated Heston curve is smoother, so it misses part of that local shape.
+
+The residuals are structured across strikes. The model under-fits the local hump around strikes 314 to 327 and over-fits much of the right side of the smile. That pattern suggests more than pure Monte Carlo noise; it points to either model misspecification, limited flexibility from a single maturity, or the effect of noisy market quotes.
+
+A negative `rho` is economically consistent with the leverage effect often observed in equity markets: downside spot moves tend to be associated with higher variance. In this calibration, however, I would not interpret `rho` too strongly because the optimizer did not move all parameters substantially away from their starting values.
+
+The fitted `v0` is above `theta`, which can be interpreted as the fitted model assigning higher near-term variance than long-run variance. That is a useful way to read the result, but it should be treated cautiously because the calibration is based on one maturity rather than a full term structure.
+
+The fact that `kappa`, `sigma`, and `rho` remain at their starting values is itself informative. A single option smile does not contain enough information to estimate every Heston parameter reliably, and several parameter combinations can produce similar implied-volatility shapes.
 
 ## Repository Structure
 
