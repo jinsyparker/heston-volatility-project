@@ -114,6 +114,22 @@ The fitted `v0` is above `theta`, which can be interpreted as the fitted model a
 
 The fact that `kappa`, `sigma`, and `rho` remain at their starting values is itself informative. A single option smile does not contain enough information to estimate every Heston parameter reliably, and several parameter combinations can produce similar implied-volatility shapes.
 
+## Limitations and Extensions
+
+The main limitation is that the calibration uses one implied-volatility smile. A single maturity does not contain enough term-structure information to identify all five Heston parameters reliably.
+
+Monte Carlo pricing makes the stochastic dynamics visible, but it also introduces sampling noise and makes repeated calibration relatively expensive. This matters because the optimizer is evaluating noisy model prices.
+
+The market data comes from `yfinance`, which is useful for this project but not institutional-quality options data. Bid-ask spreads, stale quotes, and low-liquidity contracts can all affect implied-volatility estimates.
+
+The result is also one market snapshot. It does not show whether the fitted parameters are stable across different dates or market regimes.
+
+Natural follow-up experiments would be:
+
+- calibrating several expiries jointly instead of fitting one smile;
+- comparing Monte Carlo pricing with characteristic-function or Fourier-based Heston pricing;
+- repeating the calibration across multiple market dates to test parameter stability.
+
 ## Repository Structure
 
 ```text
@@ -165,27 +181,3 @@ Recommended notebook order:
 4. `notebooks/04_heston_calibration.ipynb`
 
 The saved sample data under `data/sample/` lets the later notebooks run without needing to fetch a fresh option chain first. To refresh the market data, rerun notebook `01`.
-
-## What I Learned from the Project
-
-Market data needs more cleaning than the theory usually suggests. Midpoint construction, liquidity filters, parity checks, and noisy quotes all matter before the model calibration step even begins.
-
-The volatility smile makes the limitation of constant-volatility Black-Scholes much more concrete. Black-Scholes is still useful as a baseline and diagnostic tool, but the smile itself is evidence that one volatility input is not enough to describe the market.
-
-Calibration is not just about finding an optimizer minimum. I found that residuals, parameter interpretation, simulation noise, and the selected calibration region all affect how much meaning I should attach to the final parameter values.
-
-## Limitations
-
-- The data comes from `yfinance`, which is useful for this project but not institutional-quality options data.
-- The current calibration focuses on a single implied-volatility smile rather than jointly fitting the full surface.
-- Monte Carlo calibration introduces simulation noise and is slower than semi-closed-form Heston pricing.
-
-## Possible Extensions
-
-- Calibrate across multiple expiries instead of a single smile.
-- Compare the Monte Carlo pricer with the semi-closed-form Heston solution.
-- Test parameter stability across different market dates.
-
-## Final Note
-
-This started as a smaller options-pricing exercise and became a deeper project as I got more interested in volatility modelling. My main goal was to understand the full path from market option quotes to implied volatility, stochastic-volatility simulation, and calibration, rather than only using a pre-built pricing library.

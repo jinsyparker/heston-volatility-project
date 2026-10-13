@@ -95,4 +95,8 @@ The fitted `v0` is above `theta`, which is consistent with the fitted model assi
 
 ## Follow-up Experiment
 
-A natural next experiment is to calibrate several maturities jointly and compare the Monte Carlo results with a faster characteristic-function or Fourier-based Heston pricer.
+Natural next experiments:
+
+- Calibrate several maturities jointly instead of fitting one smile.
+- Compare the Monte Carlo results with a faster characteristic-function or Fourier-based Heston pricer.
+- Repeat the calibration across multiple market dates to check parameter stability.
